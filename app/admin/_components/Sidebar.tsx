@@ -21,9 +21,8 @@ export default function Sidebar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`block px-5 py-3 text-sm hover:bg-blue-100 ${
-                isActive ? 'bg-blue-100 font-bold' : ''
-              }`}
+              className={`block px-5 py-3 text-sm hover:bg-blue-100 ${isActive ? 'bg-blue-100 font-bold' : ''
+                }`}
             >
               {link.label}
             </Link>
