@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Category } from '@/app/_types'
+import PostForm from '../_components/PostForm'
+// バックエンドが受け取る形の型（import type なので型だけを読み込む）
+import type { UpdatePostRequestBody } from '@/app/api/admin/posts/[id]/route'
 
 export default function Page() {
   const { id } = useParams<{ id: string }>()   // URLの [id] 部分
@@ -38,17 +41,19 @@ export default function Page() {
 
   // ③ 更新（PUT）
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()   // フォーム送信でページがリロードされるのを止める
+    // 送るデータにバックエンドと同じ型を付ける（形がズレると型エラーになる）
+    const body: UpdatePostRequestBody = {
+      title,
+      content,
+      thumbnailUrl,
+      categories: selectedIds.map((id) => ({ id })),  // [2,3] → [{id:2},{id:3}]
+    }
     await fetch(`/api/admin/posts/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        content,
-        thumbnailUrl,
-        categories: selectedIds.map((id) => ({ id })),  // [2,3] → [{id:2},{id:3}]
-      }),
+      body: JSON.stringify(body),
     })
     alert('更新しました')
   }
@@ -61,52 +66,25 @@ export default function Page() {
     router.push('/admin/posts')   // 一覧へ戻る
   }
 
-  // ⑤ カテゴリーのチェック切り替え
-
-  const toggleCategory = (categoryId: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)  // 付いてたら外す
-        : [...prev, categoryId],                  // 無ければ足す
-    )
-  }
-
-  // ⑥ 見た目（フォーム）
+  // ⑤ 見た目（フォーム部分は PostForm にまとめてある）
 
   return (
     <div>
       <h1 className="text-xl font-bold mb-6">記事編集</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm mb-1">タイトル</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)}
-            className="w-full border rounded p-2" />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">内容</label>
-          <textarea value={content} onChange={(e) => setContent(e.target.value)}
-            className="w-full border rounded p-2 h-40" />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">サムネイルURL</label>
-          <input value={thumbnailUrl} onChange={(e) => setThumbnailUrl(e.target.value)}
-            className="w-full border rounded p-2" />
-        </div>
-        <div>
-          <span className="block text-sm mb-1">カテゴリー</span>
-          {categories.map((c) => (
-            <label key={c.id} className="mr-4">
-              <input type="checkbox"
-                checked={selectedIds.includes(c.id)}
-                onChange={() => toggleCategory(c.id)} /> {c.name}
-            </label>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">更新</button>
-          <button type="button" onClick={handleDelete} className="bg-red-500 text-white px-4 py-2 rounded">削除</button>
-        </div>
-      </form>
+      <PostForm
+        title={title}
+        setTitle={setTitle}
+        content={content}
+        setContent={setContent}
+        thumbnailUrl={thumbnailUrl}
+        setThumbnailUrl={setThumbnailUrl}
+        selectedIds={selectedIds}
+        setSelectedIds={setSelectedIds}
+        categories={categories}
+        onSubmit={handleSubmit}
+        submitLabel="更新"
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

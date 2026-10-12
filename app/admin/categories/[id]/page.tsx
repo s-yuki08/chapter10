@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import CategoryForm from '../_components/CategoryForm'
+// バックエンドが受け取る形の型（import type なので型だけを読み込む）
+import type { UpdateCategoryRequestBody } from '@/app/api/admin/categories/[id]/route'
 
 export default function Page() {
   const { id } = useParams<{ id: string }>() // URLの [id] 部分
@@ -21,12 +24,14 @@ export default function Page() {
   }, [id])
 
   // 更新（PUT）
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault() // フォーム送信でページがリロードされるのを止める
+    // 送るデータにバックエンドと同じ型を付ける（形がズレると型エラーになる）
+    const body: UpdateCategoryRequestBody = { name }
     await fetch(`/api/admin/categories/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(body),
     })
     alert('更新しました')
   }
@@ -41,17 +46,13 @@ export default function Page() {
   return (
     <div>
       <h1 className="text-xl font-bold mb-6">カテゴリー編集</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm mb-1">カテゴリー名</label>
-          <input value={name} onChange={(e) => setName(e.target.value)}
-            className="w-full border rounded p-2" />
-        </div>
-        <div className="flex gap-2">
-          <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">更新</button>
-          <button type="button" onClick={handleDelete} className="bg-red-500 text-white px-4 py-2 rounded">削除</button>
-        </div>
-      </form>
+      <CategoryForm
+        name={name}
+        setName={setName}
+        onSubmit={handleSubmit}
+        submitLabel="更新"
+        onDelete={handleDelete}
+      />
     </div>
   )
 }
