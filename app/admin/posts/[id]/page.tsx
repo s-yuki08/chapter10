@@ -6,15 +6,17 @@ import { Category } from '@/app/_types'
 import PostForm from '../_components/PostForm'
 // バックエンドが受け取る形の型（import type なので型だけを読み込む）
 import type { UpdatePostRequestBody } from '@/app/api/admin/posts/[id]/route'
+import { useSupabaseSession } from '@/app/_hooks/useSupabaseSession'
 
 export default function Page() {
   const { id } = useParams<{ id: string }>()   // URLの [id] 部分
   const router = useRouter()                    // 削除後に一覧へ戻るため
+  const { token } = useSupabaseSession()
 
   // フォームの入力値
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [thumbnailUrl, setThumbnailUrl] = useState('')
+  const [thumbnailImageKey, setThumbnailImageKey] = useState('')
   const [selectedIds, setSelectedIds] = useState<number[]>([]) // チェックされたカテゴリーのid
   // 選択肢として出す全カテゴリー
   const [categories, setCategories] = useState<Category[]>([])
@@ -22,21 +24,33 @@ export default function Page() {
   // ② 開いたときに記事とカテゴリーを取ってきて、フォームに入れる
 
   useEffect(() => {
+    if (!token) return
+
     const fetcher = async () => {
-      const res = await fetch(`/api/admin/posts/${id}`)
+      const res = await fetch(`/api/admin/posts/${id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
+      })
       const { post } = await res.json()   // ← 単数形の post
       setTitle(post.title)
       setContent(post.content)
-      setThumbnailUrl(post.thumbnailUrl)
+      setThumbnailImageKey(post.thumbnailImageKey)
       // postCategories から category の id だけ取り出す
       setSelectedIds(post.postCategories.map((pc: { category: Category }) => pc.category.id))
 
-      const res2 = await fetch('/api/admin/categories')
+      const res2 = await fetch('/api/admin/categories', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
+      })
       const { categories } = await res2.json()
       setCategories(categories)
     }
     fetcher()
-  }, [id])
+  }, [id, token])
   // ここが新規作成ページとの一番の違いです。新規作成は空のフォームから始まりますが、編集は今の値を入れた状態から始まります。
 
   // ③ 更新（PUT）
@@ -47,12 +61,15 @@ export default function Page() {
     const body: UpdatePostRequestBody = {
       title,
       content,
-      thumbnailUrl,
+      thumbnailImageKey,
       categories: selectedIds.map((id) => ({ id })),  // [2,3] → [{id:2},{id:3}]
     }
     await fetch(`/api/admin/posts/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token!,
+      },
       body: JSON.stringify(body),
     })
     alert('更新しました')
@@ -62,7 +79,12 @@ export default function Page() {
 
   const handleDelete = async () => {
     if (!confirm('削除しますか？')) return
-    await fetch(`/api/admin/posts/${id}`, { method: 'DELETE' })
+    await fetch(`/api/admin/posts/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: token!,
+      },
+    })
     router.push('/admin/posts')   // 一覧へ戻る
   }
 
@@ -76,8 +98,8 @@ export default function Page() {
         setTitle={setTitle}
         content={content}
         setContent={setContent}
-        thumbnailUrl={thumbnailUrl}
-        setThumbnailUrl={setThumbnailUrl}
+        thumbnailImageKey={thumbnailImageKey}
+        setThumbnailImageKey={setThumbnailImageKey}
         selectedIds={selectedIds}
         setSelectedIds={setSelectedIds}
         categories={categories}

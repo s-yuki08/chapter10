@@ -1,6 +1,10 @@
 'use client'
 
 import { Category } from '@/app/_types'
+import { ChangeEvent, useEffect, useState } from 'react'
+import Image from 'next/image'
+import { supabase } from '@/app/_libs/supabase'
+import { v4 as uuidv4 } from 'uuid'
 
 // このフォームが受け取る値（props）の型
 type Props = {
@@ -8,8 +12,8 @@ type Props = {
   setTitle: (title: string) => void
   content: string
   setContent: (content: string) => void
-  thumbnailUrl: string
-  setThumbnailUrl: (thumbnailUrl: string) => void
+  thumbnailImageKey: string
+  setThumbnailImageKey: (thumbnailImageKey: string) => void
   selectedIds: number[] // チェックされたカテゴリーのid
   setSelectedIds: (ids: number[]) => void
   categories: Category[] // 選択肢として出す全カテゴリー
@@ -23,8 +27,8 @@ export default function PostForm({
   setTitle,
   content,
   setContent,
-  thumbnailUrl,
-  setThumbnailUrl,
+  thumbnailImageKey,
+  setThumbnailImageKey,
   selectedIds,
   setSelectedIds,
   categories,
@@ -39,6 +43,59 @@ export default function PostForm({
         ? selectedIds.filter((id) => id !== categoryId) // 付いてたら外す
         : [...selectedIds, categoryId], // 無ければ足す
     )
+  }
+
+  // Imageタグのsrcにセットする画像URLを持たせるstate
+  const [thumbnailImageUrl, setThumbnailImageUrl] = useState<null | string>(
+    null,
+  )
+
+  useEffect(() => {
+    if (!thumbnailImageKey) return
+
+    // アップロード時に取得した key（thumbnailImageKey）を用いて画像のURLを取得
+    const fetcher = async () => {
+      const {
+        data: { publicUrl },
+      } = await supabase.storage
+        .from('post_thumbnail')
+        .getPublicUrl(thumbnailImageKey)
+
+      setThumbnailImageUrl(publicUrl)
+    }
+
+    fetcher()
+  }, [thumbnailImageKey])
+
+  // 画像を選んだら Supabase Storage にアップロードする
+  const handleImageChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    if (!event.target.files || event.target.files.length == 0) {
+      // 画像が選択されていないのでreturn
+      return
+    }
+
+    const file = event.target.files[0] // 選択された画像を取得
+
+    const filePath = `private/${uuidv4()}` // ファイルパスを指定
+
+    // Supabaseに画像をアップロード
+    const { data, error } = await supabase.storage
+      .from('post_thumbnail') // ここでバケット名を指定
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      })
+
+    // アップロードに失敗したらエラーを表示して終了
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    // 保存した場所（key）を、ページの thumbnailImageKey に入れる
+    setThumbnailImageKey(data.path)
   }
 
   return (
@@ -60,12 +117,24 @@ export default function PostForm({
         />
       </div>
       <div>
-        <label className="block text-sm mb-1">サムネイルURL</label>
-        <input
-          value={thumbnailUrl}
-          onChange={(e) => setThumbnailUrl(e.target.value)}
-          className="w-full border rounded p-2"
-        />
+        <label
+          htmlFor="thumbnailImageKey"
+          className="block text-sm font-medium text-gray-700"
+        >
+          サムネイルURL
+        </label>
+        <input type="file" id="thumbnailImageKey" onChange={handleImageChange} accept="image/*" />
+        {/* 画像の表示 */}
+        {thumbnailImageUrl && (
+          <div className="mt-2">
+            <Image
+              src={thumbnailImageUrl}
+              alt="thumbnail"
+              width={400}
+              height={400}
+            />
+          </div>
+        )}
       </div>
       <div>
         <span className="block text-sm mb-1">カテゴリー</span>

@@ -1,6 +1,7 @@
 
 import { prisma } from '@/app/_libs/prisma'
-import { NextResponse } from 'next/server'
+import { supabase } from '@/app/_libs/supabase'
+import { NextRequest, NextResponse } from 'next/server'
 
 // カテゴリー一覧APIのレスポンスの型
 export type CategoriesIndexResponse = {
@@ -12,7 +13,11 @@ export type CategoriesIndexResponse = {
   }[]
 }
 
-export const GET = async () => {
+export const GET = async (request: NextRequest) => {
+  const token = request.headers.get('Authorization') ?? ''
+  const { error } = await supabase.auth.getUser(token)
+  if (error)
+    return NextResponse.json({ status: error.message }, { status: 400 })
   try {
     // カテゴリーの一覧をDBから取得
     const categories = await prisma.category.findMany({
@@ -40,7 +45,11 @@ export type CreateCategoryResponse = {
   id: number
 }
 
-export const POST = async (request: Request) => {
+export const POST = async (request: NextRequest) => {
+  const token = request.headers.get('Authorization') ?? ''
+  const { error } = await supabase.auth.getUser(token)
+  if (error)
+    return NextResponse.json({ status: error.message }, { status: 400 })
   try {
     // リクエストのbodyを取得
     const body = await request.json()

@@ -3,22 +3,31 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Post } from '@/app/_types'
+import { useSupabaseSession } from '@/app/_hooks/useSupabaseSession'  // 追加
 
 export default function AdminPostsPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  const { token } = useSupabaseSession()      // 入館証を取り出す
+
   useEffect(() => {
+    if (!token) return // 入館証がまだ届いていなければ待つ
+
     const fetcher = async () => {
-      // 作成したNext.jsのAPIを叩く
-      const res = await fetch('/api/admin/posts')
+      const res = await fetch('/api/admin/posts', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token, // 入館証を見せる
+        },
+      })
       const { posts } = await res.json()
       setPosts(posts)
       setIsLoading(false)
     }
 
     fetcher()
-  }, [])
+  }, [token]) // 入館証が届いたら動く
 
   if (isLoading) return <div>読み込み中...</div>
 
