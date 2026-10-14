@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Post } from '@/app/_types'
 import Link from 'next/link'
+import { supabase } from '@/app/_libs/supabase'
 // import { notFound } from 'next/navigation'
 // import classes from './PostDetail.module.css'
 // import Category from '../../_components/Category'
@@ -57,10 +58,14 @@ export default function Page() {
     return (
         <div className="max-w-3xl mx-auto w-full px-4 py-10">
             <div>
-                {/* thumbnailUrl は任意の文字列が入るので、next/image ではなく img で表示する */}
+                {/* DB には画像の key だけが入っているので、表示のたびに getPublicUrl で URL に変える */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                    src={post.thumbnailUrl}
+                    src={
+                        supabase.storage
+                            .from('post_thumbnail')
+                            .getPublicUrl(post.thumbnailImageKey).data.publicUrl
+                    }
                     alt={post.title}
                     width={800}
                     height={400}

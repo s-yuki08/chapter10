@@ -1,20 +1,43 @@
+'use client'
+
 import Link from 'next/link'
-import Sidebar from './_components/Sidebar'
+import { usePathname } from 'next/navigation'
+import { useRouteGuard } from './_hooks/useRouteGuard'
 
-// /admin 配下の全ページで共通のレイアウト（ヘッダー＋サイドバー＋メインエリア）
-export default function AdminLayout(props: LayoutProps<'/admin'>) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  useRouteGuard()
+
+  const pathname = usePathname()
+  const isSelected = (href: string) => {
+    return pathname.includes(href)
+  }
+
   return (
-    <div className="flex flex-col flex-1 bg-white text-gray-900">
-      <header className="bg-gray-800 text-white px-6 py-4">
-        <Link href="/" className="font-bold">
-          Blog
+    <>
+      {/* サイドバー */}
+      <aside className="fixed bg-gray-100 w-70 left-0 bottom-0 top-18">
+        <Link
+          href="/admin/posts"
+          className={`p-4 block hover:bg-blue-100 ${isSelected('/admin/posts') && 'bg-blue-100'
+            }`}
+        >
+          記事一覧
         </Link>
-      </header>
+        <Link
+          href="/admin/categories"
+          className={`p-4 block hover:bg-blue-100 ${isSelected('/admin/categories') && 'bg-blue-100'
+            }`}
+        >
+          カテゴリー一覧
+        </Link>
+      </aside>
 
-      <div className="flex flex-1">
-        <Sidebar />
-        <main className="flex-1 p-8">{props.children}</main>
-      </div>
-    </div>
+      {/* メインエリア */}
+      <div className="ml-70 p-4">{children}</div>
+    </>
   )
 }

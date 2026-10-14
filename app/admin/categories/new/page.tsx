@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import CategoryForm from '../_components/CategoryForm'
 // バックエンドが受け取る形の型（import type なので型だけを読み込む）
 import type { CreateCategoryRequestBody } from '@/app/api/admin/categories/route'
+import { useSupabaseSession } from '@/app/_hooks/useSupabaseSession'
 
 export default function Page() {
   const router = useRouter() // 作成後に一覧へ戻るため
-
+  const { token } = useSupabaseSession()
   // フォームの入力値（新規なので最初は空）
   const [name, setName] = useState('')
 
@@ -19,10 +20,13 @@ export default function Page() {
     const body: CreateCategoryRequestBody = { name }
     await fetch('/api/admin/categories', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: token!,                                          // ← ③ 追加
+      },
       body: JSON.stringify(body),
     })
-    router.push('/admin/categories') // 作成したら一覧へ戻る
+    router.push('/admin/categories')
   }
 
   return (

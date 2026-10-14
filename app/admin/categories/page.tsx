@@ -3,22 +3,30 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Category } from '@/app/_types'
+import { useSupabaseSession } from '@/app/_hooks/useSupabaseSession'
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const { token } = useSupabaseSession()
 
   useEffect(() => {
+    if (!token) return
+
     const fetcher = async () => {
-      // 作成したNext.jsのAPIを叩く
-      const res = await fetch('/api/admin/categories')
+      const res = await fetch('/api/admin/categories', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token,
+        },
+      })
       const { categories } = await res.json()
       setCategories(categories)
       setIsLoading(false)
     }
 
     fetcher()
-  }, [])
+  }, [token])
 
   if (isLoading) return <div>読み込み中...</div>
 
